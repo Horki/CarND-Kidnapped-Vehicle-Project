@@ -100,7 +100,7 @@ int main() {
           std::istream_iterator<float>(),
           std::back_inserter(y_sense));
 
-          for (int i = 0; i < x_sense.size(); ++i) {
+          for (size_t i = 0; i < x_sense.size(); ++i) {
             LandmarkObs obs;
             obs.x = x_sense[i];
             obs.y = y_sense[i];
@@ -114,11 +114,11 @@ int main() {
           // Calculate and output the average weighted error of the particle 
           //   filter over all time steps so far.
           vector<Particle> particles = pf.particles;
-          int num_particles = particles.size();
+          size_t num_particles = particles.size();
           double highest_weight = -1.0;
           Particle best_particle;
           double weight_sum = 0.0;
-          for (int i = 0; i < num_particles; ++i) {
+          for (size_t i = 0; i < num_particles; ++i) {
             if (particles[i].weight > highest_weight) {
               highest_weight = particles[i].weight;
               best_particle = particles[i];

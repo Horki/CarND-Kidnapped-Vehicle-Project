@@ -2,9 +2,9 @@ project(PARTICLE_FILTER)
 
 cmake_minimum_required (VERSION 3.5)
 
-add_definitions(-std=c++11)
+add_definitions(-std=c++17)
 
-set(CXX_FLAGS "-Wall")
+set(CXX_FLAGS "-Wall -Werror")
 set(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
 
 file(GLOB HEADERS src/*.h)
