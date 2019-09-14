@@ -7,7 +7,7 @@
 
 #include "particle_filter.h"
 
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 #include <iostream>
 #include <iterator>
