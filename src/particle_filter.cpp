@@ -54,6 +54,30 @@ void ParticleFilter::prediction(double delta_t,  double std_pos[3],
    *  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
    *  http://www.cplusplus.com/reference/random/default_random_engine/
    */
+  // Create a normal Gaussian distribution
+  std::normal_distribution<double> dist_x(0.0,     std_pos[0]);
+  std::normal_distribution<double> dist_y(0.0,     std_pos[1]);
+  std::normal_distribution<double> dist_theta(0.0, std_pos[2]);
+
+  std::transform(particles.begin(), particles.end(), particles.begin(),
+                 [&](Particle & p) -> Particle {
+    // Add measurements
+    if (std::fabs(yaw_rate) < 0.00001) {
+      p.x += std::cos(p.theta) * velocity * delta_t;
+      p.y += std::sin(p.theta) * velocity * delta_t;
+    } else {
+      p.x += (velocity / yaw_rate) *
+        (std::sin(p.theta + (yaw_rate * delta_t)) - std::sin(p.theta));
+      p.y += (velocity / yaw_rate) *
+        (std::cos(p.theta) - std::cos(p.theta + (yaw_rate * delta_t)));
+      p.theta += (yaw_rate * delta_t);
+    }
+    // Add random Gaussian nose.
+    p.x     += dist_x(gen);
+    p.y     += dist_y(gen);
+    p.theta += dist_theta(gen);
+    return p;
+  });
 
 }
 
@@ -123,7 +147,7 @@ std::string ParticleFilter::getAssociations(Particle best) {
   return s;
 }
 
-std::string ParticleFilter::getSenseCoord(Particle best, string coord) {
+std::string ParticleFilter::getSenseCoord(Particle best, std::string coord) {
   std::vector<double> v = (coord == "X") ? best.sense_x : best.sense_y;
   std::stringstream ss;
   std::copy(v.begin(), v.end(), std::ostream_iterator<float>(ss, " "));
