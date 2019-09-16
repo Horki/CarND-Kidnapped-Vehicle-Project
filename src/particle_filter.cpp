@@ -35,7 +35,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[3]) {
 
   for (size_t i = 0; i < num_particles; ++i) {
     particles.push_back(Particle {
-      .id     = int(i + 1),
+      .id     = int(i),
       .x      = dist_x(gen),
       .y      = dist_y(gen),
       .theta  = dist_theta(gen),
@@ -111,7 +111,49 @@ void ParticleFilter::updateWeights(double sensor_range,
    *   and the following is a good resource for the actual equation to implement
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
+  double min_x =  std::numeric_limits<double>::infinity();
+  double max_x = -std::numeric_limits<double>::infinity();
+  double min_y =  std::numeric_limits<double>::infinity();
+  double max_y = -std::numeric_limits<double>::infinity();
 
+  for (const auto& part : particles) {
+    min_x = std::min(min_x, part.x);
+    max_x = std::max(max_x, part.x);
+    min_y = std::min(min_y, part.y);
+    max_y = std::max(max_y, part.y);
+  }
+
+  std::vector<Map::single_landmark_s> landmarks;
+  for (const auto& land : map_landmarks.landmark_list) {
+    if (land.x_f < min_x - sensor_range || land.x_f > max_x + sensor_range
+      || land.y_f < min_y - sensor_range || land.y_f > max_y + sensor_range) {
+      continue;
+    }
+    landmarks.push_back(land);
+  }
+  double sigma_x2 = std::pow(std_landmark[0], 2);
+  double sigma_y2 = std::pow(std_landmark[1], 2);
+
+  for (auto& part : particles) {
+    // reset particle weight
+    part.weight = 1;
+
+    for (auto& obs : observations) {
+      double xabs = std::cos(part.theta) * obs.x - std::sin(part.theta) * obs.y + part.x;
+      double yabs = std::sin(part.theta) * obs.x + std::cos(part.theta) * obs.y + part.y;
+      double min_norm_dist_sq = std::numeric_limits<double>::infinity();
+      for (auto& land : landmarks) {
+        double dx = xabs - land.x_f;
+        double dy = yabs - land.y_f;
+        double norm_dist_sq = dx * dx / sigma_x2 + dy * dy / sigma_y2;
+        min_norm_dist_sq = std::min(min_norm_dist_sq, norm_dist_sq);
+      }
+
+      double prob = 1 / (2 * M_PI * std_landmark[0] * std_landmark[1])
+                    * std::exp(-0.5 * min_norm_dist_sq);
+      part.weight *= prob;
+    }
+  }
 }
 
 void ParticleFilter::resample() {
@@ -121,7 +163,16 @@ void ParticleFilter::resample() {
    * NOTE: You may find std::discrete_distribution helpful here.
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
-
+  std::vector<double> w;
+  for (auto& part : particles) {
+    w.push_back(part.weight);
+  }
+  std::discrete_distribution<int> dd(w.begin(), w.end());
+  std::vector<Particle> new_particles(num_particles);
+  for (size_t i = 0; i < num_particles; ++i) {
+    new_particles.push_back(particles[dd(gen)]);
+  }
+  particles = new_particles;
 }
 
 void ParticleFilter::SetAssociations(Particle& particle,
